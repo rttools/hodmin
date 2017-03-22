@@ -1,0 +1,159 @@
+#!/usr/bin/env ruby
+# hodmin (homie-admin): provides cli to administrate homie-devices
+
+require 'trollop'
+require 'digest/md5'
+require 'pathname'
+require 'tty/table'
+require 'tty/cursor'
+require 'pastel'
+require 'json'
+require 'logger'
+require 'yaml'
+require 'configatron'
+require 'mqtt'
+require 'hodmin.rb'
+
+require 'hodmin/hodmin_list.rb'
+require 'hodmin/hodmin_push_config.rb'
+require 'hodmin/hodmin_pull_config.rb'
+require 'hodmin/hodmin_push_firmware.rb'
+require 'hodmin/hodmin_remove.rb'
+require 'hodmin/hodmin_rename.rb'
+require 'hodmin/hodmin_tools.rb'
+require 'hodmin/hodmin_initialize.rb'
+
+MAX_HOMIEVERSION = '2.0.0'.freeze
+COMMANDS = [%w(list pushFW pushCF initialize pullCF remove rename help)].freeze
+global_opts = Trollop.options do
+  banner <<-EOS.gsub(/    /, '').gsub(/#VS#/, Hodmin::VERSION)
+    HODMIN - Homie-Administration utility for using Homie-devices (ESP8266 controlled microcomputers)
+    Version #VS# (C) T. Romeyke
+    Usage:
+         hodmin [OPTIONS] COMMAND [SUBOPTIONS]
+
+    COMMANDS
+      list			list Homie-devices and / or firmware
+      pushCF		push config-data to device
+      pullCF		pull config-data from device
+      pushFW		push firmware-file to device (OTA: Over-The-Air, WIFI)
+      rename		rename firmware-file in firmware-directory
+      remove		remove firmware-file from firmware-directory
+      initialize		initialize Homie-device after first flashing of firmware via USB. Uses WIFI-AP of Device. EXPERIMENTAL!
+
+    Options (before COMMAND)
+      Every option-string can be shorted with a star: ie: --mac c55* OR *c55 => all mac starting/ending with c55
+    where [OPTIONS] are:
+    EOS
+  opt :mac, 'select device(s) by mac', type: String
+  opt :fw_name, 'select device(s) by firmware-name', type: String
+  opt :checksum, 'select device(s) by actual firmware-checksum', type: String
+  opt :localip, 'select device(s) by actual ip4-address', type: String
+  opt :configfile, 'use this configfile instead of default', type: String, default: '~/.hodmin.yaml'
+  stop_on COMMANDS
+end
+
+cmd = ARGV.shift # get the command
+cmd_opts = case cmd
+           when 'list' # parse list options
+             Trollop.options do
+               opt :fw_name, 'Select firmware(s) by firmware-name', type: String
+               opt :checksum, 'Select firmware(s) by firmware-checksum',  type: String
+               opt :style, 'Output table style: unicode, ascii or basic', type: String
+               opt :nil, 'Text to be printed in table in case of NIL-value', type: String
+             end
+           when 'pushFW'  # parse pushFW options
+             Trollop.options do
+               opt :fw_name, 'Select firmware-file by firmware-name', type: String
+               opt :checksum, 'Select ONE firmware-files by firmware-checksum', type: String
+               opt :upgrade, 'Select newest firmware-file by firmware-name of Homie-device', type: TrueClass
+               opt :auto, 'Upgrade in batch mode (do not ask for updating a device'\
+                        + ' (be carefull using this option)', type: TrueClass, default: false
+             end
+           when 'pushCF'  # parse pushCF options
+             Trollop.options do
+               opt :jsonconfig, 'JSON-formatted string with config-option(s) to change', short: '-j', type: String
+               opt :inputfile, 'Read new config-options from YAML-file', type: String
+               opt :shortconfig, 'Fast changing of some config-options. Only name:xy ota:on|off'\
+                               + ' ssid:xy wifipw:xy host:xy port:xy base_topic:xy'\
+                               + ' auth:on|off user:xy mqttpw:xy.'\
+                               + ' Enclose multiple options in "", separate options with a blank.'\
+                               + ' Arguments (i.e. passwords) must NOT include blanks or colons.'\
+                               + ' If you need these characters, use option -j or -i.', type: String
+             end
+           when 'pullCF' # parse pullCF options
+             Trollop.options do
+               opt :outputfile, 'Save config-options to file',  type: String, default: 'Homie-<MAC>'
+             end
+           when 'initialize' # parse initialize options
+             Trollop.options do
+               opt :configfile, 'Push initiating config-options from file to new device'\
+                 , type: String, default: 'homie-initialize.yaml'
+             end
+           when 'remove' # remove binary file
+             Trollop.options do
+               opt :fw_name, 'Select firmware-file by firmware-name', type: String
+               opt :checksum, 'Select firmware-file(s) by firmware-checksum', type: String
+             end
+           when 'rename' # rename binary file
+             Trollop.options do
+               opt :fw_name, 'Select firmware-file by firmware-name', type: String
+               opt :checksum, 'Select firmware-file(s) by firmware-checksum', type: String
+             end
+           else
+             Trollop.die "unknown subcommand #{cmd.inspect}"
+           end
+
+configatron.VERSION = Hodmin::VERSION
+configatron.MAX_HOMIEVERSION = MAX_HOMIEVERSION
+
+# read config:
+configfile = ''
+if global_opts[:configfile_given]
+  # if option -o is given, use config-file named in this option
+  configfile = File.expand_path(global_opts[:configfile])
+  unless File.exist?(configfile)
+    puts "ERR: Configfile not found: #{configfile}"
+    exit
+  end
+else
+  # no special configfile given, so read global hodmin-config of this user.
+  # If reading fails, store new hodmin-config with default values and exit.
+  configfile = File.expand_path('~/.hodmin.yaml')
+  unless File.exist?(configfile)
+    File.open(configfile, 'w') { |f| f.puts default_config.to_yaml }
+    puts "WARN: Default configfile written to: #{configfile}"
+  end
+end
+
+# now we can load from configfile
+config = YAML.load_file(configfile)
+
+# check config:
+exit unless check_config_ok?(config, configfile)
+
+configatron.configure_from_hash(config)
+
+# set colors for pastel list output:
+ENV.store('PASTEL_COLORS_ALIASES', 'hd_f=black,hd_b=on_bright_green,fw_f=black,fw_b=on_bright_blue')
+
+configatron.output.nil = cmd_opts[:nil] if cmd_opts[:nil_given]
+
+case cmd
+when 'list'
+  hodmin_list(global_opts, cmd_opts)
+when 'pushFW'
+  hodmin_push_firmware(global_opts, cmd_opts)
+when 'pushCF'
+  hodmin_push_config(global_opts, cmd_opts)
+when 'pullCF'
+  hodmin_pull_config(global_opts, cmd_opts)
+when 'initialize'
+  hodmin_initialize(global_opts, cmd_opts)
+when 'remove'
+  hodmin_remove(cmd_opts)
+when 'rename'
+  hodmin_rename(global_opts, cmd_opts)
+else
+  Log.log.error "unknown CMD:#{cmd}. Opts: #{global_opts}"
+end
