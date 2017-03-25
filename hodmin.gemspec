@@ -10,14 +10,14 @@ Gem::Specification.new do |spec|
   spec.email         = ["rttools@googlemail.com"]
   spec.licenses      = ['GPL-3.0']
 
-  spec.summary       = %q{Hodmin is a tool to administrate Homie-devices (esp8266-based microcomputers with Homie-firmware)}
-  spec.description   = %q{Hodmin enables you to administrate your Homie-devices via command-line-interface (CLI). It consists of some scripts to wrap homie-administration in some handy commands. Hodmin does not communicate with a homie-device directly. It instead uses your MQTT-broker to pass informations to a device.}
+  spec.summary       = %q{Hodmin is a tool to administrate Homie-devices (IOT, esp8266-based microcomputers with Homie-firmware)}
+  spec.description   = %q{Hodmin enables you to administrate your Homie-devices (IOT, esp8266-based microcomputers with Homie-firmware) via command-line-interface. It consists of some scripts to wrap Homie-administration in some handy commands. Hodmin does not communicate with a homie-device directly. It instead uses your MQTT-broker to pass informations to a device.}
   spec.homepage      = "http://www.github.com/rttools/hodmin"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.
   if spec.respond_to?(:metadata)
-    spec.metadata['allowed_push_host'] = "http://rubygems.org"
+    spec.metadata['allowed_push_host'] = "https://rubygems.org"
   else
     raise "RubyGems 2.0 or newer is required to protect against " \
       "public gem pushes."
@@ -32,6 +32,7 @@ Gem::Specification.new do |spec|
   spec.bindir        = "bin"
   spec.executables   = ["hodmin"]
   spec.require_paths = ["lib"]
+  spec.required_ruby_version = '>= 2.0.0'
 
   spec.add_dependency 'configatron', '~> 4.5', '>= 4.5.0'
   spec.add_dependency 'mqtt', '~> 0.4.0'

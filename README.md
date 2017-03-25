@@ -1,7 +1,7 @@
 Hodmin - HOmie-aDMIN
 ======================
 
-Hodmin is a tool to administrate Homie-devices (esp8266-based microcomputers with Homie-firmware: [Homie])
+Hodmin is a tool to administrate Homie-devices (IOT, esp8266-based microcomputers with Homie-firmware: [Homie])
 
 Hodmin enables you to administrate your Homie-devices via command-line-interface (CLI). It consists of some scripts to wrap homie-administration in some handy commands. If needed, these commands can be used within your own scripts, so interaction with Homie-devices is very flexible. Hodmin does not communicate with a homie-device directly. It instead uses your MQTT-broker to pull / push informations from / to a device.
 
@@ -32,7 +32,7 @@ Install with `gem install hodmin`. After installation start with command `hodmin
 
 ## System prerequisites
 
-Hodmin ist a bundle of scripts written in [Ruby][ruby]. You need a running Ruby-Installation (tested: 2.0.0 and above), most modern operating systems include one (Debian-based systems: `apt-get install ruby-full`). Hodmin ist developed and tested under Linux - it should run under MAC OS/X and -maybe - Windows too - but I didn' t test it until now.
+Hodmin ist a bundle of scripts written in [Ruby][ruby]. You need a running Ruby-Installation (tested: 2.0.0 and above), most modern operating systems include one (Debian-based systems: `apt-get install ruby-full` or use RVM[RVM]). Hodmin ist developed and tested under Linux - it should run under MAC OS/X and -maybe - Windows too - but I didn' t test it until now.
 
 ## Subcommands
 
@@ -63,7 +63,7 @@ This commands searches your MQTT-broker for Homie-devices (identfied by tree *de
 This subcommand pulls config-data from a Homie-device and shows it on screen.  Use it as config-backup and boilerplate for changing config. This command does not read directly from a Homie-device, instead it reads your MQTT-broker to collect all config-info. So this command is available even if your device is offline.
 
 - Options after *pullCF* subcommand
-  - -o, --outputfile=\<s>: Give this option if you wish to save config-data in a file. Default filename ist *Homie-\<MAC-address>.yaml* (if you only give -o). If you add a filename after -o, this file will bes used to save data.
+  - -o, --outputfile=\<s>: Give this option if you wish to save config-data in a file. Default filename ist *Homie-\<MAC-address>.yaml* (if you only give -o). If you add a filename after -o, this file will be used to save data.
   
 			 Example:
 				 - hodmin -m *747 pullCF # will create a file *Homie-6001940c5747.yaml* in your working directory.
@@ -158,7 +158,7 @@ output:
 -------
 
 Hodmin is a tool to administrate Homie-Devices.
-Copyright (C) 2017 Thomas Romeyke (rttools at googlemail.com).
+Copyright (C) 2017 Thomas Romeyke (rttools at gmail.com).
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -175,4 +175,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 [ruby]: http://www.ruby-lang.org
 [Homie]: https://github.com/marvinroger/Homie
-
+[RVM]: https://rvm.io/
