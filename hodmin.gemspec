@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["rttools@googlemail.com"]
   spec.licenses      = ['GPL-3.0']
 
-  spec.summary       = %q{Hodmin is a tool to administrate Homie-devices (IOT, esp8266-based microcomputers with Homie-firmware)}
+  spec.summary       = %q{Hodmin is a tool to administrate Homie-devices (IOT, esp8266-based microprozessors with Homie-firmware)}
   spec.description   = %q{Hodmin enables you to administrate your Homie-devices (IOT, esp8266-based microcomputers with Homie-firmware) via command-line-interface. It consists of some scripts to wrap Homie-administration in some handy commands. Hodmin does not communicate with a homie-device directly. It instead uses your MQTT-broker to pass informations to a device.}
   spec.homepage      = "http://www.github.com/rttools/hodmin"
 

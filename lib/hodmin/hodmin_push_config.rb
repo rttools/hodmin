@@ -85,11 +85,16 @@ def options_long(short)
     when 'user' then cfg['mqtt'] << Hash['username' => value]
     when 'mqttpw' then cfg['mqtt'] = cfg['mqtt'].merge(Hash['password' => value])
     when 'ota' then cfg['ota'] = Hash['enabled' => value == 'on' ? true : false]
+#   to be done:
+#    when 'settings' then 
+#           puts "to be done: settings not implemented in short-config right now"
+#           puts "key=#{key}, value=#{value}"
     else
       puts "ERR: illegal option: #{key.downcase}"
       exit
     end
   end
+
   cfg = cfg.delete_if { |_k, v| v.nil? || v.empty? }
   puts "\nNew config will be: #{cfg.inspect}"
   cfg.to_json
