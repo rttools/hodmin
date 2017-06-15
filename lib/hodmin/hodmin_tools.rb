@@ -129,7 +129,7 @@ class HomieDevice
 
   # Helper to remove some special chars from string to avoid problems in instance_variable_set:
   def remove_special_chars(str)
-    to_be_replaced = ['%', '!', '(', ')', '&', '?', ',', '.', '^', ' ']
+    to_be_replaced = ['%', '!', '(', ')', '&', '?', ',', '.', ':', '^', ' ']
     to_be_replaced.each{|char| str.gsub!(char,'')}
     str
   end
