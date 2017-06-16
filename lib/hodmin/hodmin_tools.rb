@@ -106,10 +106,6 @@ class HomieDevice
       + ' check hodmin for updates'
     end
     mhash.tap { |hs| hs.delete('$homie') }
-    # Some topics-names of homie do not fit our needs due to special chars like '/'.
-    # ['$fw/name','$fw/version','$fw/checksum']
-    # Replace '/' by '_':
-    #mhash.each { |k, v| create_attr(k.to_s.delete('$').gsub(/\//, '_').tr('-', '_'), v) }
     mhash.each { |k, v| create_attr(k.to_s, v) }
 
     # mac only downcase and without separating ':'
@@ -130,10 +126,13 @@ class HomieDevice
 
   # Helper to create instance variables on the fly:
   def create_attr(name, value)
-    # replace chars
+    # Some topics-names of homie do not fit our needs due to special chars like '/'.
+    # ['$fw/name','$fw/version','$fw/checksum']
+    # to fix this, replace / delete some chars:
     name = cleanup_instance_var_name(name)
     # do we already have a instance variable with this name?
     name = ensure_individual_instance_name(name, instance_variables)
+    # now name should be clean, we create an instancevariable using this name:
     create_method(name.to_sym) { instance_variable_get('@' + name) }
     instance_variable_set('@' + name, value)
   end
@@ -427,39 +426,11 @@ def default_config_initialize
   config
 end
 
-## Helper to remove some special chars from string to avoid problems in instance_variable_set:
-#def remove_special_chars(str)
-	#to_be_replaced = ['%', '!', '(', ')', '&', '?', ',', '.', '^', ' ']
-	#to_be_replaced.each{|char| str.gsub!(char,'')}
-	#str
-#end
-
-# Helper to remove some special chars from string to avoid problems in instance_variable_set:
-def cleanup_instance_var_name(str)
-	# translate some chars into '_':
-	str.tr!('/-','__')
-	# remove '$':
-	str.delete!('$')
-	# remove all chars not in our declared range:
-	str.gsub!(/[^0-9a-zA-Z]/i, '')
-	# sometimes remaining string may be empty:
-	str = 'GENERIC_TOPIC' if str.empty?
-	# return string as new instance variable name:
-	str
-end
-
-# Helper to remove some special chars from string to avoid problems in instance_variable_set:
-#def remove_special_chars(str)
-	#to_be_replaced = ['%', '!', '(', ')', '&', '?', ',', '.', '^', ' ']
-	#to_be_replaced.each{|char| str.gsub!(char,'')}
-	#str
-#end
-
 # Helper to remove some special chars from string to avoid problems in instance_variable_set:
 def cleanup_instance_var_name(inputstring)
 	# translate some signs into char-representation:
 	str = inputstring
-	to_be_replaced = [['%','PCT'],[':','COL'],['?','QMARK'],['&','AMPS'],['!','EXCLM'],['.','DOT']]
+	to_be_replaced = [['%','PCT'],[':','CLN'],['?','QMARK'],['&','AMPS'],['!','EXCLM'],['.','DOT']]
 	to_be_replaced.each{|org,rpl| str = str.gsub(org,'_' + rpl + '_')}
 	# translate some signs into '_':
 	str.tr!('/-','__')
