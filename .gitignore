@@ -9,4 +9,6 @@
 /tmp/
 *.yaml
 *.log
+test*.rb
+*.gem
 
