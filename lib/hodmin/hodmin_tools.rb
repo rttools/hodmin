@@ -156,13 +156,15 @@ class HomieDevice
   end
 
   # Helper to push a firmware-file vai MQTT to our Homie-Device.
-  def push_firmware_to_dev(new_firmware)
+  def push_firmware_to_dev(new_firmware, upgrade_offline_devices=false)
     bin_file = File.read(new_firmware.file_path)
     md5_bin_file = Digest::MD5.hexdigest(bin_file)
     base_topic = configatron.mqtt.base_topic + mac + '/'
     client = mqtt_connect
     sended = FALSE
-    client.publish(base_topic + '$implementation/ota/checksum', md5_bin_file, retain = false)
+    # Clear any retained client messages
+    client.publish(base_topic + '$implementation/ota/status', nil, retain = true)
+    client.publish(base_topic + '$implementation/ota/checksum', md5_bin_file, retain = upgrade_offline_devices)
     sleep 0.1
     client.subscribe(base_topic + '$implementation/ota/status')
     cursor = TTY::Cursor
@@ -170,6 +172,11 @@ class HomieDevice
     client.get do |_topic, message|
       ms = message
       ms = message.split(/ /).first.strip if message.include?(' ')
+      if upgrade_offline_devices
+        # Clear published checksum immediately, to prevent OTA loops
+        client.publish(base_topic + '$implementation/ota/checksum', nil, retain = true)
+        upgrade_offline_devices = false
+      end
       if ms == '206'
         now, ges = message.split(/ /).last.strip.split(/\//).map(&:to_i)
         actual = (now / ges.to_f * 100).round(0)
