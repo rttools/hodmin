@@ -67,6 +67,7 @@ cmd_opts = case cmd
                opt :fw_name, 'Select firmware-file by firmware-name', type: String
                opt :checksum, 'Select ONE firmware-files by firmware-checksum', type: String
                opt :upgrade, 'Select newest firmware-file by firmware-name of Homie-device', type: TrueClass
+               opt :offline, 'Upgrade offline devices (will wait till the device comes online)', type: TrueClass
                opt :auto, 'Upgrade in batch mode (do not ask for updating a device'\
                         + ' (be carefull using this option)', type: TrueClass, default: false
              end

@@ -3,6 +3,7 @@ def hodmin_push_firmware(gopts, copts)
   fw_checksum = copts[:checksum] || ''
   fw_name = copts[:fw_name] || ''
   batchmode = copts[:auto] || false
+  offlinemode = copts[:offline] || false
   mac = gopts[:mac] || ''
   hd_upgrade = gopts[:upgradable_given] && gopts[:upgradable]
   fw_upgrade = copts[:upgrade_given] && copts[:upgrade]
@@ -49,7 +50,7 @@ def hodmin_push_firmware(gopts, copts)
     next if hd_upgrade && !up_dev.upgradable
     my_fw = my_fws.select { |f| f.fw_name == up_dev.fw_name }.sort_by(&:fw_version).last if hd_upgrade
     puts "Device #{up_dev.mac} is #{up_dev.online_status}. (installed FW-Checksum: #{up_dev.fw_checksum})"
-    next unless up_dev.online? && up_dev.fw_checksum != my_fw.checksum
+    next unless (up_dev.online? || offlinemode) && up_dev.fw_checksum != my_fw.checksum
     if batchmode
       answer = 'y'
     else
@@ -57,6 +58,6 @@ def hodmin_push_firmware(gopts, copts)
       answer = STDIN.gets.chomp.downcase
     end
     Log.log.info "Dev. #{up_dev.mac} (running #{up_dev.fw_version}) upgrading to #{my_fw.fw_version}"
-    up_dev.push_firmware_to_dev(my_fw) if 'y' == answer
+    up_dev.push_firmware_to_dev(my_fw, offlinemode) if 'y' == answer
   end
 end
