@@ -33,7 +33,8 @@ def hodmin_push_config(gopts, copts)
   my_devs.each do |up_dev|
     copts = get_config_from_option(conf_new)
     puts "Device #{up_dev.mac} is #{up_dev.online_status}"
-    next unless up_dev.online?
+    # Allow updating devices that come online only periodically!
+    # next unless up_dev.online?
     print 'Start updating? <Yn>:'
     answer = STDIN.gets.chomp.downcase
     next unless up_dev.online && 'y' == answer
