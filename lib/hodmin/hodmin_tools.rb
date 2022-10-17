@@ -156,47 +156,60 @@ class HomieDevice
   end
 
   # Helper to push a firmware-file vai MQTT to our Homie-Device.
-  def push_firmware_to_dev(new_firmware)
+  def push_firmware_to_dev(new_firmware, upgrade_offline_devices=false)
     bin_file = File.read(new_firmware.file_path)
     md5_bin_file = Digest::MD5.hexdigest(bin_file)
     base_topic = configatron.mqtt.base_topic + mac + '/'
     client = mqtt_connect
     sended = FALSE
-    client.publish(base_topic + '$implementation/ota/checksum', md5_bin_file, retain = false)
-    sleep 0.1
-    client.subscribe(base_topic + '$implementation/ota/status')
-    cursor = TTY::Cursor
-    puts ' '
-    client.get do |_topic, message|
-      ms = message
-      ms = message.split(/ /).first.strip if message.include?(' ')
-      if ms == '206'
-        now, ges = message.split(/ /).last.strip.split(/\//).map(&:to_i)
-        actual = (now / ges.to_f * 100).round(0)
-        print cursor.column(1)
-        print "Pushing firmware, #{actual}% done"
+    # Clear any retained client messages
+    client.publish(base_topic + '$implementation/ota/status', nil, retain = true)
+    client.publish(base_topic + '$implementation/ota/checksum', md5_bin_file, retain = upgrade_offline_devices)
+    begin
+      sleep 0.1
+      client.subscribe(base_topic + '$implementation/ota/status')
+      cursor = TTY::Cursor
+      puts ' '
+      client.get do |_topic, message|
+        ms = message
+        ms = message.split(/ /).first.strip if message.include?(' ')
+        if upgrade_offline_devices
+          # Clear published checksum immediately, to prevent OTA loops
+          client.publish(base_topic + '$implementation/ota/checksum', nil, retain = true)
+          upgrade_offline_devices = false
+        end
+        if ms == '206'
+          now, ges = message.split(/ /).last.strip.split(/\//).map(&:to_i)
+          actual = (now / ges.to_f * 100).round(0)
+          print cursor.column(1)
+          print "Pushing firmware, #{actual}% done"
+        end
+        if ms == '304'
+          puts '304, file already installed. No action needed. ' + message
+          break
+        end
+        if ms == '403'
+          puts '403, OTA disabled:' + message
+          break
+        end
+        if ms == '400'
+          puts '400, Bad checksum:' + message
+          break
+        end
+        if ms == '202'
+          puts '202, pushing file'
+          client.publish(base_topic + '$implementation/ota/firmware', bin_file, retain = false)
+          sended = TRUE
+        end
+        if ms == '200' && sended
+          puts "\nFile-md5=#{md5_bin_file} installed, device #{name} is rebooting"
+          break
+        end
       end
-      if ms == '304'
-        puts '304, file already installed. No action needed. ' + message
-        break
-      end
-      if ms == '403'
-        puts '403, OTA disabled:' + message
-        break
-      end
-      if ms == '400'
-        puts '400, Bad checksum:' + message
-        break
-      end
-      if ms == '202'
-        puts '202, pushing file'
-        client.publish(base_topic + '$implementation/ota/firmware', bin_file, retain = false)
-        sended = TRUE
-      end
-      if ms == '200' && sended
-        puts "\nFile-md5=#{md5_bin_file} installed, device #{name} is rebooting"
-        break
-      end
+    rescue SystemExit, Interrupt
+      # Make sure the retained OTA message is cleared
+      client.publish(base_topic + '$implementation/ota/checksum', nil, retain = true)
+      raise
     end
   end
 end
